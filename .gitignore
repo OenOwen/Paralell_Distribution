@@ -1,0 +1,12 @@
+# Ignore compiled files
+*.o
+*.out
+*.exe
+*.a
+*.so
+*.dll
+
+
+# Ignore editor-specific files
+.vscode/
+
