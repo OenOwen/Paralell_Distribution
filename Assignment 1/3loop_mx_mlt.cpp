@@ -15,6 +15,7 @@ vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
 
   // iter over rows of mx A
   for (int i = 0; i < a_rows_cnt; i++) {
+
     // iter over cols of mx B
     for (int j = 0; j < b_cols_cnt; j++) {
 
@@ -43,7 +44,6 @@ void printMx(const vector<vector<int>> &mx) {
 int main() {
   vector<vector<int>> A = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
   vector<vector<int>> B = {{9, 8, 7}, {6, 5, 4}, {3, 2, 1}};
-
   vector<vector<int>> C = mxMult(A, B);
 
   printMx(A);

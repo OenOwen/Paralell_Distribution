@@ -7,5 +7,6 @@ using namespace std;
 
 int main() {
     cout << "Hello opttimized version \n";
-    return 1;
+    
+    return 0;
 }
