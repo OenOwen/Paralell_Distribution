@@ -1,56 +1,253 @@
 #include <iostream>
 #include <vector>
+#include <chrono>
+#include <tuple>
 
 // allows us to use cout instead of std::cout every time.
 using namespace std;
+using namespace std::chrono;
 
-vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
-                           const vector<vector<int>> &mx_B) {
-
-  int a_rows_cnt = mx_A.size();
-  int b_cols_cnt = mx_B[0].size();
-  int b_rows_cnt = mx_B.size();
-
-  vector<vector<int>> mx_C(a_rows_cnt, vector<int>(b_cols_cnt, 0));
-
-  // iter over rows of mx A
-  for (int i = 0; i < a_rows_cnt; i++) {
-
-    // iter over cols of mx B
-    for (int j = 0; j < b_cols_cnt; j++) {
-
-      // iter over rows in mx B
-      for (int k = 0; k < b_rows_cnt; k++) {
-        int valToAdd = mx_A[i][k] * mx_B[k][j];
-        mx_C[i][j] += valToAdd;
-      }
-
-      //cout << "C[" << i << "][" << j << "] = " << mx_C[i][j] << "\n";
+// function to create mx with values in range of size n
+// i want the values to be between 1 and 100
+vector<vector<int>> createMx(int n)
+{
+  vector<vector<int>> mx(n, vector<int>(n));
+  for (int i = 0; i < n; i++)
+  {
+    for (int j = 0; j < n; j++)
+    {
+      mx[i][j] = rand() % 100 + 1;
     }
-    //cout << "\n";
   }
-  return mx_C;
+  return mx;
 }
 
-void printMx(const vector<vector<int>> &mx) {
-  for (const vector<int> &row : mx) {
-    for (int val : row) {
+vector<vector<int>> transposeMx(const vector<vector<int>> &mx)
+{
+  int rows = mx.size(), cols = mx[0].size();
+  vector<vector<int>> transposed(cols, vector<int>(rows));
+
+  for (int i = 0; i < rows; i++)
+  {
+    for (int j = 0; j < cols; j++)
+    {
+      transposed[j][i] = mx[i][j];
+    }
+  }
+
+  return transposed;
+}
+
+void printMx(const vector<vector<int>> &mx)
+{
+  for (const vector<int> &row : mx)
+  {
+    for (int val : row)
+    {
       cout << val << " ";
     }
     cout << "\n";
   }
 }
 
-int main() {
-  vector<vector<int>> A = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-  vector<vector<int>> B = {{9, 8, 7}, {6, 5, 4}, {3, 2, 1}};
-  vector<vector<int>> C = mxMult(A, B);
+// function that divides mx into 4 matrices 11, 12, 21 and 22
+void divideMx(const vector<vector<int>> &mx)
+{
 
-  printMx(A);
-  cout << "x \n";
-  printMx(B);
-  cout << "= \n";
-  printMx(C);
+  int n = mx.size();
+
+  if (n % 2 != 0)
+  {
+    cout << "Matrix size must be even\n";
+    return;
+  }
+
+  if (n < 4)
+  {
+    cout << "Matrix size must be greater than 8\n";
+    return;
+  }
+
+  int half_n = n / 2;
+
+  // size of these: half_n x half_n
+  vector<vector<int>> mx11(half_n, vector<int>(half_n));
+  vector<vector<int>> mx12(half_n, vector<int>(half_n));
+  vector<vector<int>> mx21(half_n, vector<int>(half_n));
+  vector<vector<int>> mx22(half_n, vector<int>(half_n));
+
+
+
+  for (int i = 0; i < half_n; i++)
+  {
+    for (int j = 0; j < half_n; j++)
+    {
+      mx11[i][j] = mx[i][j];
+      mx12[i][j] = mx[i][j + half_n];
+      mx21[i][j] = mx[i + half_n][j];
+      mx22[i][j] = mx[i + half_n][j + half_n];
+    }
+  }
+
+  printMx(mx11);
+  cout << "\n";
+  printMx(mx12);
+  cout << "\n";
+  printMx(mx21);
+  cout << "\n";
+  printMx(mx22);
+}
+
+vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
+                           const vector<vector<int>> &mx_B,
+                           int n)
+{
+  vector<vector<int>> mx_C(n, vector<int>(n, 0));
+
+  if (n <= 64)
+  {
+
+    vector<vector<int>> transposed_B = transposeMx(mx_B);
+
+    for (int i = 0; i < n; i++)
+    {
+      for (int j = 0; j < n; j++)
+      {
+        for (int k = 0; k < n; k++)
+        {
+          mx_C[i][j] += mx_A[i][k] * transposed_B[j][k];
+        }
+      }
+    }
+  }
+  else
+  {
+    int half_n = n / 2;
+
+    vector<vector<int>> A11(half_n, vector<int>(half_n));
+    vector<vector<int>> A12(half_n, vector<int>(half_n));
+    vector<vector<int>> A21(half_n, vector<int>(half_n));
+    vector<vector<int>> A22(half_n, vector<int>(half_n));
+
+    vector<vector<int>> B11(half_n, vector<int>(half_n));
+    vector<vector<int>> B12(half_n, vector<int>(half_n));
+    vector<vector<int>> B21(half_n, vector<int>(half_n));
+    vector<vector<int>> B22(half_n, vector<int>(half_n));
+
+    // Initialize submatrices
+    for (int i = 0; i < half_n; i++)
+    {
+      for (int j = 0; j < half_n; j++)
+      {
+        A11[i][j] = mx_A[i][j];
+        A12[i][j] = mx_A[i][j + half_n];
+        A21[i][j] = mx_A[i + half_n][j];
+        A22[i][j] = mx_A[i + half_n][j + half_n];
+
+        B11[i][j] = mx_B[i][j];
+        B12[i][j] = mx_B[i][j + half_n];
+        B21[i][j] = mx_B[i + half_n][j];
+        B22[i][j] = mx_B[i + half_n][j + half_n];
+      }
+    }
+
+    vector<vector<int>> C11_1 = mxMult(A11, B11, half_n);
+    vector<vector<int>> C11_2 = mxMult(A12, B21, half_n);
+
+
+    vector<vector<int>> C12_1 = mxMult(A11, B12, half_n);
+    vector<vector<int>> C12_2 = mxMult(A12, B22, half_n);
+
+
+    vector<vector<int>> C21_1 = mxMult(A21, B11, half_n);
+    vector<vector<int>> C21_2 = mxMult(A22, B21, half_n);
+
+
+    vector<vector<int>> C22_1 = mxMult(A21, B12, half_n);
+    vector<vector<int>> C22_2 = mxMult(A22, B22, half_n);
+
+    for (int i = 0; i < half_n; i++)
+    {
+      for (int j = 0; j < half_n; j++)
+      {
+        mx_C[i][j] = C11_1[i][j] + C11_2[i][j];
+        mx_C[i][j + half_n] = C12_1[i][j] + C12_2[i][j];
+        mx_C[i + half_n][j] = C21_1[i][j] + C21_2[i][j];
+        mx_C[i + half_n][j + half_n] = C22_1[i][j] + C22_2[i][j];
+      }
+    }
+  }
+
+  return mx_C;
+}
+
+int main()
+{
+  // vector<vector<int>> A = {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
+
+  // // 8x8 matrix
+  // vector<vector<int>> B = {{1, 2, 3, 4, 5, 6, 7, 8},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8},
+  //                           {1, 2, 3, 4, 5, 6, 7, 8}};
+
+  // // 4x4 matrix D
+  // vector<vector<int>> D = {{1, 2, 3, 4},
+  //                           {1, 2, 3, 4},
+  //                           {1, 2, 3, 4},
+  //                           {1, 2, 3, 4}};
+
+  vector<vector<int>> A;
+  vector<vector<int>> B;
+
+  int totalTime = 0;
+  for (int i = 0; i < 1; i++){
+
+    // create mx of size 25
+    A = createMx(1024);
+
+    // create mx of size 25
+    B = createMx(1024);
+
+    auto start = high_resolution_clock::now();
+    vector<vector<int>> C = mxMult(A, B, 1024);
+    auto stop = high_resolution_clock::now();
+    auto time = duration_cast<microseconds>(stop - start);
+    totalTime += time.count();
+  }
+  
+
+  int time = totalTime / 1;
+  
+  
+
+  
+
+  // printMx(A);
+  // cout << "x \n";
+  // printMx(B);
+  // cout << "= \n";
+
+  cout << "\nTime taken by optimized matrix multiplication: " << time << " microseconds" << endl;
 
   return 0;
 }
