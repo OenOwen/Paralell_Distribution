@@ -104,6 +104,11 @@ vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
 {
   vector<vector<int>> mx_C(n, vector<int>(n, 0));
 
+  int **ptr_C = new int*[n];
+  for (int i = 0; i < n; ++i)
+    ptr_C[i] = mx_C[i].data();
+
+
   if (n <= 64)
   {
 
@@ -115,7 +120,7 @@ vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
       {
         for (int k = 0; k < n; k++)
         {
-          mx_C[i][j] += mx_A[i][k] * transposed_B[j][k];
+          ptr_C[i][j] += mx_A[i][k] * transposed_B[j][k];
         }
       }
     }
@@ -170,13 +175,15 @@ vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
     {
       for (int j = 0; j < half_n; j++)
       {
-        mx_C[i][j] = C11_1[i][j] + C11_2[i][j];
-        mx_C[i][j + half_n] = C12_1[i][j] + C12_2[i][j];
-        mx_C[i + half_n][j] = C21_1[i][j] + C21_2[i][j];
-        mx_C[i + half_n][j + half_n] = C22_1[i][j] + C22_2[i][j];
+        ptr_C[i][j] = C11_1[i][j] + C11_2[i][j];
+        ptr_C[i][j + half_n] = C12_1[i][j] + C12_2[i][j];
+        ptr_C[i + half_n][j] = C21_1[i][j] + C21_2[i][j];
+        ptr_C[i + half_n][j + half_n] = C22_1[i][j] + C22_2[i][j];
       }
     }
   }
+
+  delete[] ptr_C;
 
   return mx_C;
 }
