@@ -4,6 +4,8 @@
 #include <thread>
 #include <omp.h>
 
+// g++ -O2 -march=native -ffast-math threads_mx_mlt.cpp -o thr
+
 // allows us to use cout instead of std::cout every time.
 using namespace std;
 using namespace std::chrono;
