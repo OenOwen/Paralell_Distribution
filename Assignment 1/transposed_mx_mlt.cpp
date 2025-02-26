@@ -79,7 +79,7 @@ int main() {
   vector<vector<int>> B;
 
   int totalTime = 0;
-  for (int i = 0; i < 1; i++){
+  for (int i = 0; i < 10; i++){
 
     // create mx of size 25
     A = createMx(1024);
@@ -95,9 +95,9 @@ int main() {
   }
   
 
-  int time = totalTime / 1;
+  int time = totalTime / 10;
   
-  
+  double seconds = time / 1000000.0;
 
   // printMx(A);
   // cout << "x \n";
@@ -105,7 +105,7 @@ int main() {
   // cout << "= \n";
   // printMx(C);
 
-  cout << "\nTime taken by optimized matrix multiplication: "<< time << " microseconds" << endl;
+  cout << "\nTime taken by optimized matrix multiplication: "<< time << " microseconds (" << seconds <<" seconds)" << endl;
 
   return 0;
 }

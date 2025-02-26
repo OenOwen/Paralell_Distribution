@@ -1,7 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
-#include <tuple>
+#include <thread>
+#include <omp.h>
 
 // allows us to use cout instead of std::cout every time.
 using namespace std;
@@ -24,18 +25,19 @@ vector<vector<int>> createMx(int n)
 
 vector<vector<int>> transposeMx(const vector<vector<int>> &mx)
 {
-  int rows = mx.size(), cols = mx[0].size();
-  vector<vector<int>> transposed(cols, vector<int>(rows));
+    int rows = mx.size(), cols = mx[0].size();
+    vector<vector<int>> transposed(cols, vector<int>(rows));
 
-  for (int i = 0; i < rows; i++)
-  {
-    for (int j = 0; j < cols; j++)
+    #pragma omp parallel for // no dffference
+    for (int i = 0; i < rows; i++)
     {
-      transposed[j][i] = mx[i][j];
+        for (int j = 0; j < cols; j++)
+        {
+        transposed[j][i] = mx[i][j];
+        }
     }
-  }
 
-  return transposed;
+    return transposed;
 }
 
 void printMx(const vector<vector<int>> &mx)
@@ -113,7 +115,7 @@ vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
   {
 
     vector<vector<int>> transposed_B = transposeMx(mx_B);
-
+    #pragma omp parallel for collapse(2) // no difference
     for (int i = 0; i < n; i++)
     {
       for (int j = 0; j < n; j++)
@@ -140,6 +142,7 @@ vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
     vector<vector<int>> B22(half_n, vector<int>(half_n));
 
     // Initialize submatrices
+    #pragma omp parallel for collapse(2) // improves speed
     for (int i = 0; i < half_n; i++)
     {
       for (int j = 0; j < half_n; j++)
@@ -156,21 +159,47 @@ vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
       }
     }
 
-    vector<vector<int>> C11_1 = mxMult(A11, B11, half_n);
-    vector<vector<int>> C11_2 = mxMult(A12, B21, half_n);
+    vector<thread> threads;
 
+    vector<vector<int>> C11_1(half_n, vector<int>(half_n));
+    vector<vector<int>> C11_2(half_n, vector<int>(half_n));
 
-    vector<vector<int>> C12_1 = mxMult(A11, B12, half_n);
-    vector<vector<int>> C12_2 = mxMult(A12, B22, half_n);
+    vector<vector<int>> C12_1(half_n, vector<int>(half_n));
+    vector<vector<int>> C12_2(half_n, vector<int>(half_n));
 
+    vector<vector<int>> C21_1(half_n, vector<int>(half_n));
+    vector<vector<int>> C21_2(half_n, vector<int>(half_n));
 
-    vector<vector<int>> C21_1 = mxMult(A21, B11, half_n);
-    vector<vector<int>> C21_2 = mxMult(A22, B21, half_n);
+    vector<vector<int>> C22_1(half_n, vector<int>(half_n));
+    vector<vector<int>> C22_2(half_n, vector<int>(half_n));
 
-
-    vector<vector<int>> C22_1 = mxMult(A21, B12, half_n);
-    vector<vector<int>> C22_2 = mxMult(A22, B22, half_n);
-
+    #pragma omp parallel sections
+    {
+        #pragma omp section
+        C11_1 = mxMult(A11, B11, half_n);
+    
+        #pragma omp section
+        C11_2 = mxMult(A12, B21, half_n);
+    
+        #pragma omp section
+        C12_1 = mxMult(A11, B12, half_n);
+    
+        #pragma omp section
+        C12_2 = mxMult(A12, B22, half_n);
+    
+        #pragma omp section
+        C21_1 = mxMult(A21, B11, half_n);
+    
+        #pragma omp section
+        C21_2 = mxMult(A22, B21, half_n);
+    
+        #pragma omp section
+        C22_1 = mxMult(A21, B12, half_n);
+    
+        #pragma omp section
+        C22_2 = mxMult(A22, B22, half_n);
+    }
+    
     for (int i = 0; i < half_n; i++)
     {
       for (int j = 0; j < half_n; j++)
@@ -190,22 +219,22 @@ vector<vector<int>> mxMult(const vector<vector<int>> &mx_A,
 
 int main()
 {
-  // vector<vector<int>> A = {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-  //                           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
+//   vector<vector<int>> A = {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+//                             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
 
   // // 8x8 matrix
   // vector<vector<int>> B = {{1, 2, 3, 4, 5, 6, 7, 8},
@@ -227,6 +256,7 @@ int main()
   vector<vector<int>> B;
 
   int totalTime = 0;
+  vector<vector<int>> C;
   for (int i = 0; i < 10; i++){
 
     // create mx of size 25
@@ -236,13 +266,13 @@ int main()
     B = createMx(1024);
 
     auto start = high_resolution_clock::now();
-    vector<vector<int>> C = mxMult(A, B, 1024);
+    C = mxMult(A, B, 1024);
     auto stop = high_resolution_clock::now();
     auto time = duration_cast<microseconds>(stop - start);
     totalTime += time.count();
-
-
   }
+
+//   printMx(C);
   
 
   int time = totalTime / 10;

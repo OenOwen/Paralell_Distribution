@@ -57,7 +57,7 @@ int main() {
   
 
   int totalTime = 0;
-  for (int i = 0; i < 1; i++){
+  for (int i = 0; i < 10; i++){
     vector<vector<int>> A = createMx(1024);
     vector<vector<int>> B = createMx(1024);
     auto start = high_resolution_clock::now();
@@ -68,7 +68,7 @@ int main() {
   }
   
 
-  int time = totalTime / 1;
+  int time = totalTime / 10;
 
   // printMx(A);
   // cout << "x \n";
@@ -76,7 +76,8 @@ int main() {
   // cout << "= \n";
   // printMx(C);
 
-  cout << "\nTime taken for 3loop Matrix multiplication: " << time << " microseconds" << endl;
+  float seconds = time / 1000000.0;
 
+  cout << "\nTime taken for 3loop Matrix multiplication: " << time << " microseconds (" << seconds <<" seconds)" << endl;
   return 0;
 }
