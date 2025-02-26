@@ -28,7 +28,7 @@ vector<vector<int>> transposeMx(const vector<vector<int>> &mx)
     int rows = mx.size(), cols = mx[0].size();
     vector<vector<int>> transposed(cols, vector<int>(rows));
 
-    #pragma omp parallel for // no dffference
+    #pragma omp parallel for // small dffference
     for (int i = 0; i < rows; i++)
     {
         for (int j = 0; j < cols; j++)
