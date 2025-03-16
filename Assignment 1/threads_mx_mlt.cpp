@@ -4,7 +4,7 @@
 #include <thread>
 #include <omp.h>
 
-// g++ -O2 -march=native -ffast-math threads_mx_mlt.cpp -o thr
+// g++ -O2 -march=native -ffast-math -fopenmp threads_mx_mlt.cpp -o thr
 
 // allows us to use cout instead of std::cout every time.
 using namespace std;
