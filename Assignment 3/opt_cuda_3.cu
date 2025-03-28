@@ -1,5 +1,5 @@
 
-// nvcc -o cda 3loop_cuda.cu
+// $ nvcc -o opt_cuda_3 opt_cuda_3.cu
 
 
 #include <iostream>
@@ -12,19 +12,51 @@ using namespace std::chrono;
 
 // Define matrix size
 #define N 1024
+#define TILE_SIZE 32
+#define COARSE_NUM 2    
 
 // CUDA kernel to perform matrix multiplication
 __global__ void matrixMult(int *d_A, int *d_B, int *d_C, int n) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (row < n && col < n) {
-        int sum = 0;
-        for (int k = 0; k < n; ++k) {
-            sum += d_A[row * n + k] * d_B[k * n + col];
+    // Shared memory for tiles
+    __shared__ int mxA_shared[TILE_SIZE][TILE_SIZE];
+    __shared__ int mxB_shared[TILE_SIZE][TILE_SIZE];
+
+    int row = (blockIdx.y * TILE_SIZE + threadIdx.y) * COARSE_NUM;
+    int col = blockIdx.x * TILE_SIZE + threadIdx.x;
+
+    int sum[COARSE_NUM] = {0};
+
+    
+    for (int i = 0; i < (n + TILE_SIZE - 1) / TILE_SIZE; i++) {
+
+        for (int j = 0; j < COARSE_NUM; j++){
+            if (row + j < n){
+                mxA_shared[threadIdx.y * COARSE_NUM + j][threadIdx.x] = d_A[(row + j) * n + (i * TILE_SIZE + threadIdx.x)];
+            }
         }
-        d_C[row * n + col] = sum;
+        
+        mxB_shared[threadIdx.y][threadIdx.x] = d_B[col + (i * TILE_SIZE + threadIdx.y) * n]; // <------
+
+
+        __syncthreads();
+        
+        #pragma unroll
+        for (int k = 0; k < TILE_SIZE; k++){
+            for (int j = 0; j < COARSE_NUM; j++){
+                sum[j] += mxA_shared[threadIdx.y * COARSE_NUM + j][k] * mxB_shared[k][threadIdx.x];
+            }
+        }
+
+        __syncthreads();
     }
+
+    for (int j = 0; j < COARSE_NUM; j++){
+        if (row < n && col < n) {
+            d_C[(row + j) * n + col] = sum[j];
+        }
+    }
+    
 }
 
 // Function to create matrix on host
@@ -91,8 +123,8 @@ int main() {
   
     for (int i = 0; i < 10; i++) {
         // Define grid and block dimensions
-        dim3 threadsPerBlock(16, 16);
-        dim3 blocksPerGrid((N + 15) / 16, (N + 15) / 16);
+        dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
+        dim3 blocksPerGrid((N + TILE_SIZE - 1) / TILE_SIZE, (N + TILE_SIZE - 1) / TILE_SIZE);
 
         // Copy data from host to device
         cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
