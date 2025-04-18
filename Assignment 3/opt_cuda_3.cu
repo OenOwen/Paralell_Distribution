@@ -1,6 +1,4 @@
-
 // $ nvcc -o opt_cuda_3 opt_cuda_3.cu
-
 
 #include <iostream>
 #include <vector>
@@ -13,38 +11,38 @@ using namespace std::chrono;
 // Define matrix size
 #define N 1024
 #define TILE_SIZE 32
-#define COARSE_NUM 2    
+#define COARSE_NUM 4   
 
 // CUDA kernel to perform matrix multiplication
 __global__ void matrixMult(int *d_A, int *d_B, int *d_C, int n) {
 
-    // Shared memory for tiles
+    // Shared memory for tiles - make mxA_shared larger to accommodate both 2 and 4
     __shared__ int mxA_shared[TILE_SIZE][TILE_SIZE];
     __shared__ int mxB_shared[TILE_SIZE][TILE_SIZE];
 
     int row = (blockIdx.y * TILE_SIZE + threadIdx.y) * COARSE_NUM;
     int col = blockIdx.x * TILE_SIZE + threadIdx.x;
 
-    int sum[COARSE_NUM] = {0};
+    int sum[4] = {0};
 
-    
     for (int i = 0; i < (n + TILE_SIZE - 1) / TILE_SIZE; i++) {
 
         for (int j = 0; j < COARSE_NUM; j++){
-            if (row + j < n){
-                mxA_shared[threadIdx.y * COARSE_NUM + j][threadIdx.x] = d_A[(row + j) * n + (i * TILE_SIZE + threadIdx.x)];
+            if (row + j < n && i * TILE_SIZE + threadIdx.x < n){
+                mxA_shared[threadIdx.y][threadIdx.x] = d_A[(row + j) * n + (i * TILE_SIZE + threadIdx.x)];
             }
         }
         
-        mxB_shared[threadIdx.y][threadIdx.x] = d_B[col + (i * TILE_SIZE + threadIdx.y) * n]; // <------
-
+        if (i * TILE_SIZE + threadIdx.y < n && col < n) {
+            mxB_shared[threadIdx.y][threadIdx.x] = d_B[(i * TILE_SIZE + threadIdx.y) * n + col];
+        }
 
         __syncthreads();
         
         #pragma unroll
         for (int k = 0; k < TILE_SIZE; k++){
             for (int j = 0; j < COARSE_NUM; j++){
-                sum[j] += mxA_shared[threadIdx.y * COARSE_NUM + j][k] * mxB_shared[k][threadIdx.x];
+                sum[j] += mxA_shared[threadIdx.y][k] * mxB_shared[k][threadIdx.x];
             }
         }
 
@@ -52,11 +50,10 @@ __global__ void matrixMult(int *d_A, int *d_B, int *d_C, int n) {
     }
 
     for (int j = 0; j < COARSE_NUM; j++){
-        if (row < n && col < n) {
+        if ((row + j) < n && col < n) {
             d_C[(row + j) * n + col] = sum[j];
         }
     }
-    
 }
 
 // Function to create matrix on host
@@ -120,7 +117,6 @@ int main() {
     // createTestMx(h_A, N);
     // createTestMx(h_B, N);
 
-  
     for (int i = 0; i < 10; i++) {
         // Define grid and block dimensions
         dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
@@ -136,7 +132,6 @@ int main() {
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
 
-        // Record start time
         cudaEventRecord(start, 0);
 
         // Launch CUDA kernel to multiply matrices
@@ -149,11 +144,9 @@ int main() {
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
 
-        // Calculate elapsed time
         cudaEventElapsedTime(&elapsedTime, start, stop);
         totalTime += elapsedTime;
 
-        // Destroy CUDA events
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
     }
@@ -164,7 +157,8 @@ int main() {
     // Calculate average time
     float avgTime = totalTime / 10.0f;
 
-    cout << "\nTime taken for 3loop Matrix multiplication (CUDA): " 
+    cout << "\nCOARSE_NUM: " << COARSE_NUM << endl;
+    cout << "Time taken for 3loop Matrix multiplication (CUDA): " 
          << avgTime << " milliseconds (" 
          << avgTime / 1000.0f << " seconds)" << endl;
 
@@ -172,7 +166,6 @@ int main() {
     cudaFree(d_A);
     cudaFree(d_B);
     cudaFree(d_C);
-
 
     // printMx(h_A, N);
     // printMx(h_B, N);

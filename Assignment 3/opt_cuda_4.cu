@@ -10,7 +10,6 @@
 using namespace std;
 using namespace std::chrono;
 
-// Define matrix size
 #define N 1024
 #define TILE_SIZE 32    
 
@@ -22,13 +21,11 @@ __global__ void matrixMult(int *d_A, int *d_B, int *d_C, int n) {
     int row = blockIdx.y * TILE_SIZE + threadIdx.y;
     int col = blockIdx.x * TILE_SIZE + threadIdx.x;
     
-    // Privatized register variable instead of shared memory accumulation
     int private_sum[4] = {0, 0, 0, 0};
 
     int sum = 0;
     
     for (int i = 0; i < (n + TILE_SIZE - 1) / TILE_SIZE; i++) {
-        // Load tiles into shared memory (coalesced access)
         mxA_shared[threadIdx.y][threadIdx.x] = d_A[row * n + (i * TILE_SIZE + threadIdx.x)];
         mxB_shared[threadIdx.y][threadIdx.x] = d_B[col + (i * TILE_SIZE + threadIdx.y) * n];
 

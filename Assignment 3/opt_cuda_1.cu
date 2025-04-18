@@ -125,7 +125,6 @@ int main() {
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
 
-        // Record start time
         cudaEventRecord(start, 0);
 
         // Launch CUDA kernel to multiply matrices
@@ -138,11 +137,9 @@ int main() {
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
 
-        // Calculate elapsed time
         cudaEventElapsedTime(&elapsedTime, start, stop);
         totalTime += elapsedTime;
 
-        // Destroy CUDA events
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
     }
