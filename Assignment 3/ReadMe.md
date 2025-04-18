@@ -13,3 +13,4 @@
 6. Run using ./opt_cuda_3
 7. Compile nvcc -o opt_cuda_4 opt_cuda_4.cu
 8. Run using ./opt_cuda_4
+9. Also, run Main.py which contains CuPy matmul to check against your system
